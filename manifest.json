@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "SafeDom",
+  "version": "1.0",
+
+  "description": "Vérifie si le site en cours est sûr",
+  "homepage_url": "Firefox ixtension / change address background color if current domain is not in bookmarks preventing phishing",
+  
+  "icons": {
+    "64": "icons/safedom-64.png"
+  },
+
+  "permissions": [
+    "theme",
+    "bookmarks",
+    "tabs",
+    "storage"
+  ],
+
+  "background": {
+    "scripts": ["background.js"]
+  }
+}
