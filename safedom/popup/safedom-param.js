@@ -105,9 +105,9 @@ async function initPopup() {
         console.log(inDomain)
 
         if (inDomain) {
-            document.getElementById('current_url').innerHTML=' Déjà dans les marque-pages: '+domain;
+            document.getElementById('current_url').innerText=' Déjà dans les marque-pages: '+domain;
         } else {
-            document.getElementById('current_url').innerHTML=' Non détecté dans les marque-pages: '+domain;
+            document.getElementById('current_url').innerText=' Non détecté dans les marque-pages: '+domain;
         }
 
     }
