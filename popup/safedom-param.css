@@ -1,0 +1,16 @@
+html, body {
+  width: 300px;
+}
+
+p {
+    line-height:1.4em;
+    margin: 4px 0;
+}
+
+fieldset {
+    margin: 4px 0;
+}
+
+#in_color, #out_color {
+    width:5em;
+}
