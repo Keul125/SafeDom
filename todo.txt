@@ -1,0 +1,13 @@
+
+/*
+Todo:
+- optimisations: si le domaine de l'onglet ne change pas, ne pas faire de tests => réglé dans 1.1
+- lors d'un changement de couleurs ou de bookmarks, vide le cache des tabs => réglé dans 1.2
+- tester en retirant un sousdomaine si ça matche toujours un bookmark => réglé dans 1.2
+- avoir une liste interne hors marque pages
+- utiliser https://publicsuffix.org/ ?
+- about:debugging#/runtime/this-firefox
+- https://addons.mozilla.org/fr/developers/addons
+
+*/
+

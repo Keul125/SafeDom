@@ -1,0 +1,37 @@
+{
+  "manifest_version": 2,
+  "name": "SafeDom",
+  "version": "1.2",
+
+  "description": "Firefox ixtension / change address background color if current domain is not in bookmarks preventing phishing",
+  "homepage_url": "https://github.com/Keul125/SafeDom",
+  
+  "icons": {
+    "64": "icons/safedom-64.png"
+  },
+
+  "permissions": [
+    "theme",
+    "bookmarks",
+    "tabs",
+    "storage"
+  ],
+
+  "background": {
+    "scripts": ["background.js"]
+  },
+  
+  "options_ui": {
+    "page": "options/safedom-options.html",
+    "browser_style": true
+  },
+
+  "browser_action": {
+    "default_icon": "icons/safedom-64.png",
+    "default_title": "SafeDom",
+    "default_popup": "popup/safedom-param.html"
+  }
+
+  
+  
+}
