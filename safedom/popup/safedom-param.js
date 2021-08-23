@@ -83,6 +83,33 @@ async function listBookmarkDomains() {
 
 
 
+async function checkIfInDomainHistory(domain) {
+    let occurences = 0
+
+    let searching = await browser.history.search({
+        text: '://'+domain,
+        startTime: 0
+    });
+    console.log('searching')
+    console.log(searching)
+    occurences +=  searching.length;
+
+    // checking without subdomain
+    if( (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
+        && safedomConfig.subdomainCkbox
+    ) {
+        domain=domain.substring(domain.indexOf('.')+1);
+        searching = await browser.history.search({
+            text: '://'+domain,
+            startTime: 0
+        });
+        console.log('searching2')
+        console.log(searching)
+        occurences +=  searching.length;
+    }
+    return occurences
+}
+
 async function initPopup() {
 
     document.addEventListener("click", (e) => {
@@ -103,6 +130,13 @@ async function initPopup() {
         let inDomain = await checkIfInDomain(domain);
 
         console.log(inDomain)
+
+
+        let inDomainHistory = await checkIfInDomainHistory(domain);
+
+
+
+        document.getElementById('current_url2').innerText=' Occurences dans l\'historique: '+inDomainHistory;
 
         if (inDomain) {
             document.getElementById('current_url').innerText=' Déjà dans les marque-pages: '+domain;

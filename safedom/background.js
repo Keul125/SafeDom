@@ -51,7 +51,7 @@ async function checkIfInDomain(domain) {
 
     // checking without subdomain
     if(!inDomain
-        && domain.indexOf('.') !== -1
+        && (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
         && safedomConfig.subdomainCkbox
     ) {
         domain=domain.substring(domain.indexOf('.')+1);
@@ -114,6 +114,9 @@ async function listBookmarkDomains() {
     tabsUrls=[];
     themeStatus=0;
 }
+
+
+
 
 
 
