@@ -8,7 +8,7 @@ Firefox extension / change address background color if current domain is not in 
 Open about:debugging#/runtime/this-firefox load temporary addon and select "manifest.json" in the safedom folder.
 
 ## How it works
-This addon will change the background color of the adress bar ifthe current website is not in the bookmarks
+This addon will change the background color of the adress bar if the current website is not in the bookmarks
 
 ![screenshot](screenshot_3.png)
 
