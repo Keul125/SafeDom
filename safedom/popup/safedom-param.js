@@ -8,6 +8,8 @@ let tabsUrls=[];
 let listBookmarkUrls = [];
 
 let safedomConfig={
+    'histoCkbox' : false,
+    'histoNum' : 4,
     'subdomainCkbox' : true, // chuck sub domains
     'inCkbox' : false,
     'outCkbox' : true,
@@ -67,6 +69,35 @@ async function checkIfInDomain(domain) {
     return inDomain
 }
 
+async function checkIfInDomainHistory(domain) {
+    let occurences = 0
+
+    let searching = await browser.history.search({
+        text: '://'+domain,
+        startTime: 0
+    });
+    console.log('searching')
+    console.log(searching)
+    //occurences +=  searching.length;
+    occurences +=  searching.reduce((a, b) => a + b.visitCount, 0);
+
+    // checking without subdomain
+    if( (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
+        && safedomConfig.subdomainCkbox
+    ) {
+        domain=domain.substring(domain.indexOf('.')+1);
+        searching = await browser.history.search({
+            text: '://'+domain,
+            startTime: 0
+        });
+        console.log('searching2')
+        console.log(searching)
+        //occurences +=  searching.length;
+        occurences +=  searching.reduce((a, b) => a + b.visitCount, 0);
+    }
+    return occurences
+}
+
 // Store all domains from bookmarks in listBookmarkUrls
 async function listBookmarkDomains() {
     let bookmarkItems = await browser.bookmarks.search({});
@@ -83,32 +114,6 @@ async function listBookmarkDomains() {
 
 
 
-async function checkIfInDomainHistory(domain) {
-    let occurences = 0
-
-    let searching = await browser.history.search({
-        text: '://'+domain,
-        startTime: 0
-    });
-    console.log('searching')
-    console.log(searching)
-    occurences +=  searching.length;
-
-    // checking without subdomain
-    if( (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
-        && safedomConfig.subdomainCkbox
-    ) {
-        domain=domain.substring(domain.indexOf('.')+1);
-        searching = await browser.history.search({
-            text: '://'+domain,
-            startTime: 0
-        });
-        console.log('searching2')
-        console.log(searching)
-        occurences +=  searching.length;
-    }
-    return occurences
-}
 
 async function initPopup() {
 
@@ -136,12 +141,12 @@ async function initPopup() {
 
 
 
-        document.getElementById('current_url2').innerText=' Occurences dans l\'historique: '+inDomainHistory;
+        document.getElementById('current_url2').innerText=' Occurences en l\'historique: '+inDomainHistory;
 
         if (inDomain) {
-            document.getElementById('current_url').innerText=' Déjà dans les marque-pages: '+domain;
+            document.getElementById('current_url').innerText=' Déjà en marque-page: '+domain;
         } else {
-            document.getElementById('current_url').innerText=' Non détecté dans les marque-pages: '+domain;
+            document.getElementById('current_url').innerText=' Pas en marque-page: '+domain;
         }
 
     }

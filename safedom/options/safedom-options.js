@@ -1,5 +1,7 @@
 
 let safedomConfig={
+    'histoCkbox' : false,
+    'histoNum' : 4,
     'subdomainCkbox' : true, // chuck sub domains
     'inCkbox' : false,
     'outCkbox' : true,
@@ -10,6 +12,14 @@ let safedomConfig={
 async function initPopup() {
     
     document.addEventListener("change", (e) => {
+        if(e.target.id === 'hi_ckbox') {
+            safedomConfig.histoCkbox=e.target.checked;
+            saveobj();
+        }
+        if(e.target.id === 'hi_num') {
+            safedomConfig.histoNum=e.target.value;
+            saveobj();
+        }
         if(e.target.id === 'sd_ckbox') {
             safedomConfig.subdomainCkbox=e.target.checked;
             saveobj();
@@ -37,7 +47,8 @@ async function initPopup() {
         safedomConfig=safedomConfigStorage.safedomConfig;
     }
 
-
+    document.getElementById('hi_ckbox').checked=safedomConfig.histoCkbox
+    document.getElementById('hi_num').value=safedomConfig.histoNum
     document.getElementById('sd_ckbox').checked=safedomConfig.subdomainCkbox
     document.getElementById('in_ckbox').checked=safedomConfig.inCkbox
     document.getElementById('out_ckbox').checked=safedomConfig.outCkbox

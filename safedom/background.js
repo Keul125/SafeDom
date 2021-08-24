@@ -7,12 +7,15 @@ let tabsUrls=[];
 let listBookmarkUrls = [];
 
 let safedomConfig={
+    'histoCkbox' : false,
+    'histoNum' : 4,
     'subdomainCkbox' : true, // chuck sub domains
     'inCkbox' : false,
     'outCkbox' : true,
     'inColor' : '#BBFFBB',
     'outColor' : '#FFBBBB',
 }
+
 let currentTheme={}
 
 //utility function
@@ -61,6 +64,34 @@ async function checkIfInDomain(domain) {
 }
 
 
+async function checkIfInDomainHistory(domain) {
+    let occurences = 0
+
+    let searching = await browser.history.search({
+        text: '://'+domain,
+        startTime: 0
+    });
+    console.log('searching')
+    console.log(searching)
+    //occurences +=  searching.length;
+    occurences +=  searching.reduce((a, b) => a + b.visitCount, 0);
+
+    // checking without subdomain
+    if( (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
+        && safedomConfig.subdomainCkbox
+    ) {
+        domain=domain.substring(domain.indexOf('.')+1);
+        searching = await browser.history.search({
+            text: '://'+domain,
+            startTime: 0
+        });
+        console.log('searching2')
+        console.log(searching)
+        //occurences +=  searching.length;
+        occurences +=  searching.reduce((a, b) => a + b.visitCount, 0);
+    }
+    return occurences
+}
 
 
 
@@ -152,6 +183,17 @@ async function updateActiveTab(tabs) {
         // Checking in bookmarks
         let inDomain = await checkIfInDomain(domain);
 
+        let inDomainHistory = await checkIfInDomainHistory(domain);
+        console.log('inDomainHistory');
+        console.log(safedomConfig.histoCkbox);
+        console.log(safedomConfig.histoNum);
+        console.log(inDomainHistory);
+        if(!inDomain
+            && safedomConfig.histoCkbox
+            && inDomainHistory >= safedomConfig.histoNum) {
+            inDomain=true;
+        }
+
         // cache the checking
         tabsUrls[tabs[0]['windowId']][tabs[0]['id']] = [domain,inDomain];
 
@@ -172,6 +214,7 @@ async function updateActiveTab(tabs) {
 
 
 async function changeColor(inDomain, lastWindowParam) {
+    //console.log(inDomain,lastWindowParam)
 
     // manage the windowId
     if (!lastWindowParam) {
@@ -217,8 +260,8 @@ browser.bookmarks.onRemoved.addListener(listBookmarkDomains);
 
 // listen to tab changes
 browser.tabs.onUpdated.addListener(updateActiveTab);
-browser.tabs.onActivated.addListener(updateActiveTab);
-browser.windows.onFocusChanged.addListener(updateActiveTab);
+//browser.tabs.onActivated.addListener(updateActiveTab);
+//browser.windows.onFocusChanged.addListener(updateActiveTab);
 
 // update when the extension loads initially
 initExtension();
