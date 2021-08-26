@@ -1,22 +1,13 @@
 
-let currentTab;
-let lastWindow;
 
-let themeStatus=0;
-let tabsUrls=[];
-let listBookmarkUrls = [];
+/*
 
-let safedomConfig={
-    'histoCkbox' : false,
-    'histoNum' : 4,
-    'subdomainCkbox' : true, // chuck sub domains
-    'inCkbox' : false,
-    'outCkbox' : true,
-    'inColor' : '#BBFFBB',
-    'outColor' : '#FFBBBB',
-}
+ about:debugging#/runtime/this-firefox
 
-let currentTheme={}
+*/
+
+
+
 
 //utility function
 function isSupportedProtocol(urlString) {
@@ -35,16 +26,90 @@ async function getDomain(url) {
 }
 
 async function loadSafedomConfig() {
-    // Load safedomConfig from localstorage if available
-    let safedomConfigStorage = await browser.storage.local.get("safedomConfig");
-    if (safedomConfigStorage.safedomConfig) {
-        if(JSON.stringify(safedomConfigStorage.safedomConfig) !== JSON.stringify(safedomConfig)) {
+    // Load safedomStorageConfig from localstorage if available
+    let safedomConfigStorage = await browser.storage.local.get("safedomStorageConfig");
+    if (safedomConfigStorage.safedomStorageConfig) {
+        console.log('DEBUG: CONFIG IN STORAGE')
+
+        if(JSON.stringify(safedomConfigStorage.safedomStorageConfig) !== JSON.stringify(safedomConfig)) {
             // Change in config: clear tabs cache and theme status
             tabsUrls=[];
             themeStatus=0;
         }
-        safedomConfig = safedomConfigStorage.safedomConfig;
+        safedomConfig = safedomConfigStorage.safedomStorageConfig;
+    } else {
+        console.log('DEBUG: CONFIG NOT IN STORAGE')
+        console.log(safedomConfig);
     }
+}
+
+
+async function loadList() {
+    // Load safedomConfig from localstorage if available
+    let safedomConfigStorage = await browser.storage.local.get("safedomStorageInternalList");
+    if (safedomConfigStorage.safedomStorageInternalList) {
+        console.log('DEBUG: safedomStorageInternalList IN STORAGE')
+        console.log(safedomConfigStorage.safedomStorageInternalList)
+        console.log(safedomInternalList)
+
+        
+        if(JSON.stringify(safedomConfigStorage.safedomStorageInternalList) !== JSON.stringify(safedomInternalList)) {
+            // Change in list: clear tabs cache and theme status
+            tabsUrls=[];
+            themeStatus=0;
+            console.log('DEBUG: OK4 exit loadList')
+        }
+        
+        console.log('DEBUG: OK2 exit loadList')
+       safedomInternalList = safedomConfigStorage.safedomStorageInternalList;
+        console.log('DEBUG: OK3 exit loadList')
+    } else {
+        safedomInternalList = {
+            'loaded':true,
+            'list':[]
+        };
+        console.log('DEBUG: safedomInternalList NOT IN STORAGE')
+    }
+        console.log('DEBUG: OK exit loadList')
+    console.log(safedomInternalList);
+}
+
+async function saveList() {
+    browser.storage.local.set({
+        safedomStorageInternalList:  JSON.parse(JSON.stringify(safedomInternalList))
+    });
+}
+function saveobj() {
+    browser.storage.local.set({
+        safedomStorageConfig:  JSON.parse(JSON.stringify(safedomConfig))
+    });
+}
+function saveTheme() {
+    browser.storage.local.set({
+        safedomStorageThemeBackup:  JSON.parse(JSON.stringify(currentTheme))
+    });
+}
+
+
+
+
+
+async function checkIfInList(domain) {
+
+    console.log(safedomInternalList)
+
+
+    let inDomain = safedomInternalList.list.indexOf(domain) !== -1;
+
+    // checking without subdomain
+    if(!inDomain
+        && domain.indexOf('.') !== -1
+        && safedomConfig.subdomainCkbox
+    ) {
+        domain=domain.substring(domain.indexOf('.')+1);
+        inDomain = safedomInternalList.list.indexOf(domain) !== -1;
+    }
+    return inDomain
 }
 
 
@@ -62,6 +127,7 @@ async function checkIfInDomain(domain) {
     }
     return inDomain
 }
+
 
 
 async function checkIfInDomainHistory(domain) {
@@ -95,41 +161,6 @@ async function checkIfInDomainHistory(domain) {
 
 
 
-async function initExtension() {
-
-    // Load theme from storage
-    let item = await browser.storage.local.get("safedomThemeBackup");
-    if(item.safedomThemeBackup) {
-        // console.log('DEBUG: THEME IN STORAGE')
-        currentTheme = item.safedomThemeBackup;
-
-    // If theme not in storage, save in it
-    } else {
-        // console.log('DEBUG: THEME NOT IN STORAGE')
-        let currentWindow = await browser.windows.getLastFocused();
-        currentTheme = await browser.theme.getCurrent(currentWindow.id);
-        browser.storage.local.set({
-            safedomThemeBackup:  currentTheme
-        });
-    }
-
-    // BUG : browser.theme.update doesn't accept picture with moz-ext: urls
-    // Fix by converting to dataurl
-    let request = new XMLHttpRequest();
-    request.open('GET', currentTheme.images.theme_frame, true);
-    request.responseType = 'blob';
-    request.onload = function() {
-        let reader = new FileReader();
-        reader.readAsDataURL(request.response);
-        reader.onload =  function(e){
-            currentTheme.images.theme_frame = e.target.result
-        };
-    };
-    request.send();
-    await listBookmarkDomains();
-    await updateActiveTab();
-}
-
 
 
 // Store all domains from bookmarks in listBookmarkUrls
@@ -151,19 +182,50 @@ async function listBookmarkDomains() {
 
 
 
+
 async function updateActiveTab(tabs) {
-
-    await loadSafedomConfig()
-
+    if(!currentTheme) return;
+    
+    console.log('currentTheme?');
+    console.log(JSON.stringify(currentTheme));
+    console.log('lastWindow?');
+    console.log(lastWindow);
+    
+    if(lastWindow) {
+        console.log('lastWindow DETECTEDDDDD');
+        console.log(lastWindow);
+        
+    }
+    
+    
     tabs = await browser.tabs.query({active: true, currentWindow: true});
 
     if (tabs[0]) {
       currentTab = tabs[0];
 
       if (isSupportedProtocol(currentTab.url)) {
+          
+        console.log('isSupportedProtocol')  
+        console.log(isSupportedProtocol(currentTab.url))  
+        console.log(currentTab.url)  
+          
 
+    
+        await loadSafedomConfig()
+        await loadList()
         let domain = await getDomain(currentTab.url);
 
+
+
+
+        console.log('domain')  
+        console.log(domain)  
+        
+        console.log('tabsUrls')  
+        console.log(tabsUrls)  
+
+
+          
 
         // If domain for current tab didn't change, don't waste time checking in bookmarks
         if (!tabsUrls[tabs[0]['windowId']])
@@ -176,26 +238,68 @@ async function updateActiveTab(tabs) {
         if (tabsUrls[tabs[0]['windowId']][tabs[0]['id']] &&
             tabsUrls[tabs[0]['windowId']][tabs[0]['id']][0] === domain) {
 
+
+                        
+                console.log('tabsUrls changeColor')  
+                console.log(tabsUrls[tabs[0]['windowId']][tabs[0]['id']][1])  
+
+
                 await changeColor(tabsUrls[tabs[0]['windowId']][tabs[0]['id']][1]);
                 return;
             }
+
+
 
         // Checking in bookmarks
         let inDomain = await checkIfInDomain(domain);
 
         let inDomainHistory = await checkIfInDomainHistory(domain);
-        console.log('inDomainHistory');
-        console.log(safedomConfig.histoCkbox);
-        console.log(safedomConfig.histoNum);
-        console.log(inDomainHistory);
+        
+        let inList = await checkIfInList(domain);
+        
+        
+        
+        
+        console.log('inDomain/hist/list')  
+        console.log(inDomain)  
+        console.log(inDomainHistory)  
+        console.log(inList)  
+        console.log(safedomInternalList)  
+
+
+
+        
+        
+        // console.log('inDomainHistory');
+        // console.log(safedomConfig.histoCkbox);
+        // console.log(safedomConfig.histoNum);
+        // console.log(inDomainHistory);
+        
+        
+        // return;
+
+        
         if(!inDomain
             && safedomConfig.histoCkbox
             && inDomainHistory >= safedomConfig.histoNum) {
             inDomain=true;
         }
 
+        console.log('============inList')
+        console.log(inList)
+
+        if(!inDomain
+            && inList) {
+            inDomain=true;
+        }
+
         // cache the checking
         tabsUrls[tabs[0]['windowId']][tabs[0]['id']] = [domain,inDomain];
+
+        
+        console.log('============changeColor inDomain')
+        console.log(inDomain)
+
 
         await changeColor(inDomain)
 
@@ -253,6 +357,87 @@ async function changeColor(inDomain, lastWindowParam) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+let currentTab;
+let lastWindow;
+
+let themeStatus=0;
+let tabsUrls=[];
+let listBookmarkUrls = [];
+
+let safedomInternalList= {
+    'loaded':false,
+    'list':[]
+};
+let safedomConfig={
+    'histoCkbox' : false,
+    'histoNum' : 4,
+    'subdomainCkbox' : true, // chuck sub domains
+    'inCkbox' : false,
+    'outCkbox' : true,
+    'inColor' : '#BBFFBB',
+    'outColor' : '#FFBBBB',
+}
+let currentTheme={}
+
+
+
+
+async function initExtension() {
+    
+    
+
+    // Load theme from storage
+    let item = await browser.storage.local.get("Storage");
+    if(item.Storage) {
+        // console.log('DEBUG: THEME IN STORAGE')
+        currentTheme = item.Storage;
+
+    // If theme not in storage, save in it
+    } else {
+        // console.log('DEBUG: THEME NOT IN STORAGE')
+        let currentWindow = await browser.windows.getLastFocused();
+        currentTheme = await browser.theme.getCurrent(currentWindow.id);
+
+    }
+
+    // BUG : browser.theme.update doesn't accept picture with moz-ext: urls
+    // Fix by converting to dataurl
+    let request = new XMLHttpRequest();
+    request.open('GET', currentTheme.images.theme_frame, true);
+    request.responseType = 'blob';
+    request.onload = function() {
+        let reader = new FileReader();
+        reader.readAsDataURL(request.response);
+        reader.onload =  function(e){
+            currentTheme.images.theme_frame = e.target.result
+        };
+    };
+    request.send();
+    await listBookmarkDomains();
+    await updateActiveTab();
+}
+
+
+
+
+
 // listen for bookmarks changes
 browser.bookmarks.onCreated.addListener(listBookmarkDomains);
 browser.bookmarks.onChanged.addListener(listBookmarkDomains);
@@ -260,8 +445,7 @@ browser.bookmarks.onRemoved.addListener(listBookmarkDomains);
 
 // listen to tab changes
 browser.tabs.onUpdated.addListener(updateActiveTab);
-//browser.tabs.onActivated.addListener(updateActiveTab);
-//browser.windows.onFocusChanged.addListener(updateActiveTab);
 
 // update when the extension loads initially
 initExtension();
+

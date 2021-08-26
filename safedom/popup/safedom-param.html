@@ -8,11 +8,17 @@
 
 <body>
   <div id="popup-content">
+    <input type="hidden" id="current_domain" value=""></input>
 
-    <div id="current_url"></div>
-    <div id="current_url2"></div>
+    <div>Domaine: <span id="current_domain_span"></span></div>
+    <div><input type="button" id="add_domain" value="Ajouter"></input></div>
+    <div><input type="button" id="alert_list" value="alert_list"></input></div>
+    
+    <div id="in_history">Présent dans l'historique: (<span id="in_history_visits"></span> visites)</div>
+    <div id="in_bookmarks">Présent dans les marque-page</div>
+    <div id="in_list">Présent dans la liste interne</div>
 
-    <input type="button" id="openOptionsPage" value="Options">
+    <input type="button" id="open_options_page" value="Options">
 
   </div>
   <script src="safedom-param.js"></script>

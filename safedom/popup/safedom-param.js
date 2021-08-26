@@ -1,23 +1,5 @@
 
 
-let currentTab;
-let lastWindow;
-
-let themeStatus=0;
-let tabsUrls=[];
-let listBookmarkUrls = [];
-
-let safedomConfig={
-    'histoCkbox' : false,
-    'histoNum' : 4,
-    'subdomainCkbox' : true, // chuck sub domains
-    'inCkbox' : false,
-    'outCkbox' : true,
-    'inColor' : '#BBFFBB',
-    'outColor' : '#FFBBBB',
-}
-let currentTheme={}
-
 
 //utility function
 function isSupportedProtocol(urlString) {
@@ -36,27 +18,77 @@ async function getDomain(url) {
 }
 
 async function loadSafedomConfig() {
-    // Load safedomConfig from localstorage if available
-    let safedomConfigStorage = await browser.storage.local.get("safedomConfig");
-    if (safedomConfigStorage.safedomConfig) {
+    // Load safedomStorageConfig from localstorage if available
+    let safedomConfigStorage = await browser.storage.local.get("safedomStorageConfig");
+    if (safedomConfigStorage.safedomStorageConfig) {
         console.log('DEBUG: CONFIG IN STORAGE')
 
-        if(JSON.stringify(safedomConfigStorage.safedomConfig) !== JSON.stringify(safedomConfig)) {
+        if(JSON.stringify(safedomConfigStorage.safedomStorageConfig) !== JSON.stringify(safedomConfig)) {
             // Change in config: clear tabs cache and theme status
             tabsUrls=[];
             themeStatus=0;
         }
-
-        safedomConfig = safedomConfigStorage.safedomConfig;
+        safedomConfig = safedomConfigStorage.safedomStorageConfig;
     } else {
         console.log('DEBUG: CONFIG NOT IN STORAGE')
         console.log(safedomConfig);
     }
 }
 
-async function checkIfInDomain(domain) {
 
-    let inDomain = listBookmarkUrls.indexOf(domain) !== -1;
+async function loadList() {
+    // Load safedomConfig from localstorage if available
+    let safedomConfigStorage = await browser.storage.local.get("safedomStorageInternalList");
+    if (safedomConfigStorage.safedomStorageInternalList) {
+        console.log('DEBUG: safedomStorageInternalList IN STORAGE')
+        console.log(safedomConfigStorage.safedomStorageInternalList)
+        console.log(safedomInternalList)
+
+        
+        if(JSON.stringify(safedomConfigStorage.safedomStorageInternalList) !== JSON.stringify(safedomInternalList)) {
+            // Change in list: clear tabs cache and theme status
+            tabsUrls=[];
+            themeStatus=0;
+            console.log('DEBUG: OK4 exit loadList')
+        }
+        
+        console.log('DEBUG: OK2 exit loadList')
+       safedomInternalList = safedomConfigStorage.safedomStorageInternalList;
+        console.log('DEBUG: OK3 exit loadList')
+    } else {
+        safedomInternalList = {
+            'loaded':true,
+            'list':[]
+        };
+        console.log('DEBUG: safedomInternalList NOT IN STORAGE')
+    }
+        console.log('DEBUG: OK exit loadList')
+    console.log(safedomInternalList);
+}
+
+async function saveList() {
+    browser.storage.local.set({
+        safedomStorageInternalList:  JSON.parse(JSON.stringify(safedomInternalList))
+    });
+}
+function saveobj() {
+    browser.storage.local.set({
+        safedomStorageConfig:  JSON.parse(JSON.stringify(safedomConfig))
+    });
+}
+function saveTheme() {
+    browser.storage.local.set({
+        safedomStorageThemeBackup:  JSON.parse(JSON.stringify(currentTheme))
+    });
+}
+
+
+
+
+
+async function checkIfInList(domain) {
+
+    let inDomain = safedomInternalList.list.indexOf(domain) !== -1;
 
     // checking without subdomain
     if(!inDomain
@@ -64,10 +96,28 @@ async function checkIfInDomain(domain) {
         && safedomConfig.subdomainCkbox
     ) {
         domain=domain.substring(domain.indexOf('.')+1);
+        inDomain = safedomInternalList.list.indexOf(domain) !== -1;
+    }
+    return inDomain
+}
+
+
+async function checkIfInDomain(domain) {
+
+    let inDomain = listBookmarkUrls.indexOf(domain) !== -1;
+
+    // checking without subdomain
+    if(!inDomain
+        && (domain.split(".").length - 1) > 1 // il doit y avoir plus d'un point dans le nom de domaine
+        && safedomConfig.subdomainCkbox
+    ) {
+        domain=domain.substring(domain.indexOf('.')+1);
         inDomain = listBookmarkUrls.indexOf(domain) !== -1;
     }
     return inDomain
 }
+
+
 
 async function checkIfInDomainHistory(domain) {
     let occurences = 0
@@ -98,6 +148,10 @@ async function checkIfInDomainHistory(domain) {
     return occurences
 }
 
+
+
+
+
 // Store all domains from bookmarks in listBookmarkUrls
 async function listBookmarkDomains() {
     let bookmarkItems = await browser.bookmarks.search({});
@@ -115,44 +169,259 @@ async function listBookmarkDomains() {
 
 
 
+
+
+
+async function updateActiveTab(tabs) {
+
+
+    tabs = await browser.tabs.query({active: true, currentWindow: true});
+
+    if (tabs[0]) {
+      currentTab = tabs[0];
+
+      if (isSupportedProtocol(currentTab.url)) {
+    
+        await loadSafedomConfig()
+        await loadList()
+        let domain = await getDomain(currentTab.url);
+
+
+        // If domain for current tab didn't change, don't waste time checking in bookmarks
+        if (!tabsUrls[tabs[0]['windowId']])
+            tabsUrls[tabs[0]['windowId']]=[];
+        if (!tabsUrls[tabs[0]['windowId']][tabs[0]['id']])
+            tabsUrls[tabs[0]['windowId']][tabs[0]['id']]=[];
+
+
+
+        if (tabsUrls[tabs[0]['windowId']][tabs[0]['id']] &&
+            tabsUrls[tabs[0]['windowId']][tabs[0]['id']][0] === domain) {
+
+                await changeColor(tabsUrls[tabs[0]['windowId']][tabs[0]['id']][1]);
+                return;
+            }
+
+        // Checking in bookmarks
+        let inDomain = await checkIfInDomain(domain);
+
+        let inDomainHistory = await checkIfInDomainHistory(domain);
+        
+        let inList = await checkIfInList(domain);
+        
+        console.log('inDomainHistory');
+        console.log(safedomConfig.histoCkbox);
+        console.log(safedomConfig.histoNum);
+        console.log(inDomainHistory);
+        if(!inDomain
+            && safedomConfig.histoCkbox
+            && inDomainHistory >= safedomConfig.histoNum) {
+            inDomain=true;
+        }
+
+        console.log('============')
+        console.log(inList)
+
+        if(!inDomain
+            && inList) {
+            inDomain=true;
+        }
+
+        // cache the checking
+        tabsUrls[tabs[0]['windowId']][tabs[0]['id']] = [domain,inDomain];
+
+        await changeColor(inDomain)
+
+      } else {
+
+        // unsupported urls (about:config... new empty tab...)
+        if(lastWindow) {
+            await changeColor(true, lastWindow);
+        }
+      }
+    }
+}
+
+
+
+
+
+async function changeColor(inDomain, lastWindowParam) {
+    //console.log(inDomain,lastWindowParam)
+
+    // manage the windowId
+    if (!lastWindowParam) {
+        lastWindow = await browser.windows.getLastFocused();
+    } else {
+        lastWindow = lastWindowParam
+    }
+
+
+    // Load theme and custom colors
+    inColorTheme = JSON.parse(JSON.stringify(currentTheme))
+    outColorTheme = JSON.parse(JSON.stringify(currentTheme))
+    if(safedomConfig.inCkbox) {
+        inColorTheme.colors.toolbar_field = safedomConfig.inColor
+    }
+    if(safedomConfig.outCkbox) {
+        outColorTheme.colors.toolbar_field = safedomConfig.outColor
+    }
+
+
+
+    // apply theme if a change is detected
+    if (inDomain) {
+        if(themeStatus!==2) {
+            themeStatus = 2;
+            browser.theme.update(lastWindow.id, inColorTheme );
+        }
+    } else {
+        if(themeStatus!==1) {
+            themeStatus = 1
+            browser.theme.update(lastWindow.id, outColorTheme );
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+let currentTab;
+let lastWindow;
+
+let themeStatus=0;
+let tabsUrls=[];
+let listBookmarkUrls = [];
+
+let safedomInternalList= {
+    'loaded':false,
+    'list':[]
+};
+let safedomConfig={
+    'histoCkbox' : false,
+    'histoNum' : 4,
+    'subdomainCkbox' : true, // chuck sub domains
+    'inCkbox' : false,
+    'outCkbox' : true,
+    'inColor' : '#BBFFBB',
+    'outColor' : '#FFBBBB',
+}
+let currentTheme={}
+
+
+
+
+
+
+
+
 async function initPopup() {
+    console.log('initPopup()');
 
     document.addEventListener("click", (e) => {
-        if(e.target.id === 'openOptionsPage') {
-            console.log('OPENING openOptionsPage');
+        if(e.target.id === 'open_options_page') {
             browser.runtime.openOptionsPage();
         }
+        
+        if(e.target.id === 'add_domain') {
+            let domain = document.getElementById('current_domain').value;
+            
+            
+            console.log('AJOUT')
+            if(!safedomInternalList.loaded) {
+                alert('Liste interne non-chargée !');
+            } else {
+                console.log('AJOUTOK')
+                safedomInternalList.list.push(''+domain);
+                saveList();
+            }
+            console.log('ajout '+domain);
+        }
+        
+        if(e.target.id === 'alert_list') {
+           console.log('safedomInternalList');
+           console.log(safedomInternalList);
+           console.log('safedomConfig');
+           console.log(safedomConfig);
+           
+           
+           
+           loadList();
+        }
+        
+        
     });
 
     // Display current URL in popup
     let tabs = await browser.tabs.query({active: true, currentWindow: true});
-    if (tabs[0]) {
+    if (tabs[0] && isSupportedProtocol(tabs[0].url)) {
+        
         let domain = await getDomain(tabs[0].url);
-
-        await listBookmarkDomains()
-        await loadSafedomConfig()
-
+        
+        console.log(domain)
+        
+            
+        await listBookmarkDomains();
+        await loadSafedomConfig();
+        await loadList();
+        
         let inDomain = await checkIfInDomain(domain);
 
-        console.log(inDomain)
+        console.log(inDomain);
 
 
         let inDomainHistory = await checkIfInDomainHistory(domain);
+        let inDomainList = await checkIfInList(domain);
 
 
+        document.getElementById('current_domain').value=domain;
+        document.getElementById('current_domain_span').innerText=domain;
 
-        document.getElementById('current_url2').innerText=' Occurences en l\'historique: '+inDomainHistory;
 
-        if (inDomain) {
-            document.getElementById('current_url').innerText=' Déjà en marque-page: '+domain;
-        } else {
-            document.getElementById('current_url').innerText=' Pas en marque-page: '+domain;
+        document.getElementById('in_history').style.display=(inDomainHistory)?'':'none';
+        if(inDomainHistory) {
+            document.getElementById('in_history_visits').innerText=inDomainHistory;
         }
 
+        
+        document.getElementById('add_domain').disabled=inDomain;
+        
+        document.getElementById('in_bookmarks').style.display=(inDomain)?'':'none';
+        document.getElementById('in_list').style.display=(inDomainList)?'':'none';
+        
+    } else {
+        
+        document.getElementById('in_list').style.display='none';
+        document.getElementById('in_history').style.display='none';
+        document.getElementById('in_bookmarks').style.display='none';
     }
+    
+
     
 }
 
 initPopup();
-
 
