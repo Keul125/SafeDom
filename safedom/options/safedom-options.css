@@ -11,3 +11,8 @@ fieldset {
 #hi_num {
     width:5em;
 }
+
+#textarea_list {
+    width:100%;
+    height:300px;
+}
